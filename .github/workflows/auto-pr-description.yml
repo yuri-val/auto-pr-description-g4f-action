@@ -22,5 +22,4 @@ jobs:
         uses: yuri-val/auto-pr-description-g4f-action@dev
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          provider: 'auto'
-          model: 'o1'
+          model: 'o1-mini'
