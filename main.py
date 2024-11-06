@@ -145,10 +145,13 @@ def update_pr_description(github_token, context, pr_number, generated_descriptio
     pull_request = repo.get_pull(pr_number)
 
     current_description = pull_request.body or ''
-    new_description = f'---\n{generated_description}'
+    new_description = f"""> `AUTO DESCRIPTION`
+> by [auto-pr-description-g4f-action](https://github.com/yuri-val/auto-pr-description-g4f-action)
+{generated_description}
+"""
 
     try:
-        if current_description and not current_description.startswith('---\n'):
+        if current_description and not current_description.startswith('> `AUTO DESCRIPTION`'):
             print('Creating comment with original description...')
             pull_request.create_issue_comment(f'**Original description**:\n\n{current_description}')
             print('Comment created successfully.')
