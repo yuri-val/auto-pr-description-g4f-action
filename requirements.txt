@@ -1,0 +1,4 @@
+requests
+g4f
+github
+# Add any other dependencies your script needs

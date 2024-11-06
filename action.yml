@@ -2,8 +2,8 @@ name: 'Auto-generate PR Description'
 description: 'Automatically generates pull request descriptions using gpt4free when a PR is created or updated.'
 author: 'Yuri V'
 runs:
-  using: 'python'
-  main: 'main.py'
+  using: 'docker'
+  image: 'Dockerfile'
 inputs:
   github_token:
     description: 'GitHub token with repo permissions'
