@@ -1,4 +1,4 @@
-name: Auto-generate PR description
+name: Auto-generate PR description [G4F]
 
 on:
   pull_request:
@@ -19,6 +19,6 @@ jobs:
           fetch-depth: 0
 
       - name: Auto-generate PR Description
-        uses: yuri-val/auto-pr-description-g4f-action@auto-pr-description
+        uses: yuri-val/auto-pr-description-g4f-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,124 @@
+name: Auto Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get tag name
+        id: get_tag
+        shell: bash
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Get base version
+        id: get_base_version
+        shell: bash
+        run: |
+          BASE_VERSION=$(echo "${{ steps.get_tag.outputs.TAG }}" | cut -d. -f1)
+          echo "BASE_VERSION=${BASE_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Get previous tag
+        id: get_previous_tag
+        shell: bash
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "${{ steps.get_tag.outputs.TAG }}"^ || echo "")
+          echo "PREVIOUS_TAG=${PREVIOUS_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: generate_changelog
+        shell: bash
+        run: |
+          if [ -n "${{ steps.get_previous_tag.outputs.PREVIOUS_TAG }}" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %B" "${{ steps.get_previous_tag.outputs.PREVIOUS_TAG }}..${{ steps.get_tag.outputs.TAG }}")
+          else
+            CHANGELOG=$(git log --pretty=format:"- %B" "${{ steps.get_tag.outputs.TAG }}")
+          fi
+          # Remove any trailing newlines and add one at the end
+          CHANGELOG=$(echo "$CHANGELOG" | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n\+$/\n/')
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create or update base version tag
+        shell: bash
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git tag -f "${{ steps.get_base_version.outputs.BASE_VERSION }}" "${GITHUB_SHA}"
+          git push origin --force "${{ steps.get_base_version.outputs.BASE_VERSION }}"
+
+      - name: Create or Update Base Release
+        uses: actions/github-script@v6
+        env:
+          CHANGELOG: ${{ toJSON(steps.generate_changelog.outputs.CHANGELOG) }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const baseVersion = `${{ steps.get_base_version.outputs.BASE_VERSION }}`;
+            const fullVersion = `${{ steps.get_tag.outputs.TAG }}`;
+            const changelog = JSON.parse(process.env.CHANGELOG);
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const tagName = baseVersion;
+
+            try {
+              // Try to get the existing release
+              const { data: release } = await github.rest.repos.getReleaseByTag({
+                owner,
+                repo,
+                tag: tagName
+              });
+
+              // If it exists, update it
+              await github.rest.repos.updateRelease({
+                owner,
+                repo,
+                release_id: release.id,
+                tag_name: tagName,
+                name: `Base Release ${baseVersion}`,
+                body: `This is the base release for ${baseVersion}. Latest version: ${fullVersion}\n\nChangelog:\n${changelog}`,
+                draft: false,
+                prerelease: false
+              });
+            } catch (error) {
+              if (error.status === 404) {
+                // If it doesn't exist, create it
+                await github.rest.repos.createRelease({
+                  owner,
+                  repo,
+                  tag_name: tagName,
+                  name: `Base Release ${baseVersion}`,
+                  body: `This is the base release for ${baseVersion}. Latest version: ${fullVersion}\n\nChangelog:\n${changelog}`,
+                  draft: false,
+                  prerelease: false
+                });
+              } else {
+                throw error;
+              }
+            }
+
+      - name: Create Full Version Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_tag.outputs.TAG }}
+          name: Release ${{ steps.get_tag.outputs.TAG }}
+          body: |
+            Changes in this Release:
+            ${{ steps.generate_changelog.outputs.CHANGELOG }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
