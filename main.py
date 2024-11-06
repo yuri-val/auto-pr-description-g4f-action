@@ -24,7 +24,8 @@ def main():
             raise ValueError('GitHub token not provided as input.')
 
         context = get_github_context()
-        print("GitHub context: {context}")
+        print("GitHub context:")
+        print(json.dumps(context, indent=2))
 
         if context.get('event_name') != 'pull_request':
             raise ValueError('This action only runs on pull_request events.')
