@@ -91,11 +91,20 @@ def main():
         print(f'Action failed: {str(e)}')
         raise
 
-
+def get_provider_class(provider_name):
+    if provider_name == 'auto':
+        return None
+    try:
+        provider_class = getattr(g4f.Provider, provider_name.split('.')[-1])
+        if not issubclass(provider_class, BaseProvider):
+            raise ValueError(f"Invalid provider: {provider_name}")
+        return provider_class
+    except AttributeError:
+        raise ValueError(f"Provider not found: {provider_name}")
+    
 def generate_description(diff_output, temperature, provider_name, model_name):
-    provider_class = getattr(g4f.Provider, provider_name.split('.')[-1])
-    if not issubclass(provider_class, BaseProvider):
-        raise ValueError(f"Invalid provider: {provider_name}")
+    
+    provider_class = get_provider_class(provider_name)
 
     prompt = f"""**Instructions:**
 
