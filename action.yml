@@ -1,0 +1,23 @@
+name: 'Auto-generate PR Description'
+description: 'Automatically generates pull request descriptions using gpt4free when a PR is created or updated.'
+author: 'Yuri V'
+runs:
+  using: 'python'
+  main: 'main.py'
+inputs:
+  github_token:
+    description: 'GitHub token with repo permissions'
+    required: true
+    default: '${{ github.token }}'
+  temperature:
+    description: 'Sampling temperature for gpt4free (0.0 to 1.0)'
+    required: false
+    default: '0.7'
+outputs:
+  pr_number:
+    description: 'The number of the pull request updated'
+  description:
+    description: 'The generated pull request description'
+branding:
+  icon: 'git-pull-request'
+  color: 'green'
