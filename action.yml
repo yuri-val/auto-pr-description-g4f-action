@@ -1,4 +1,4 @@
-name: 'Auto-generate PR Description'
+name: 'Auto-generate PR Description [G4F]'
 description: 'Automatically generates pull request descriptions using gpt4free when a PR is created or updated.'
 author: 'Yuri V'
 runs:
