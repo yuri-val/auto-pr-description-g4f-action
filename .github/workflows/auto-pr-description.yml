@@ -19,6 +19,6 @@ jobs:
           fetch-depth: 0
 
       - name: Auto-generate PR Description
-        uses: yuri-val/auto-pr-description-g4f-action@main
+        uses: yuri-val/auto-pr-description-g4f-action@auto-pr-description
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
