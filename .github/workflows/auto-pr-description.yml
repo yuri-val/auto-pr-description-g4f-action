@@ -22,5 +22,5 @@ jobs:
         uses: yuri-val/auto-pr-description-g4f-action@dev
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          provider: 'g4f.Provider.Bing'
-          model: 'gpt-4'
+          provider: 'g4f.Provider.AmigoChat'
+          model: 'o1'
