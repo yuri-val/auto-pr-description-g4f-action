@@ -1,9 +1,10 @@
 import os
 import json
-from github import Github
+import g4f
+from github import Github, GithubException
 from subprocess import check_output, CalledProcessError
-from github import GithubException
 from g4f.client import Client
+from g4f.Provider import BaseProvider
 
 
 def get_github_context():
@@ -19,6 +20,9 @@ def main():
         # Inputs
         github_token = os.getenv('INPUT_GITHUB_TOKEN')
         temperature = float(os.getenv('INPUT_TEMPERATURE', '0.7'))
+        provider_name = os.environ.get('INPUT_PROVIDER', 'g4f.Provider.Bing')
+        model_name = os.environ.get('INPUT_MODEL', 'gpt-4')
+
         event_name = os.getenv('GITHUB_EVENT_NAME')
 
         print(f"Temperature: {temperature}")
@@ -67,7 +71,7 @@ def main():
         generated_description = None
 
         while retry_count < max_retries:
-            generated_description = generate_description(diff_output, temperature)
+            generated_description = generate_description(diff_output, temperature, provider_name, model_name)
             print(f"Generated description (attempt {retry_count + 1}):")
             print(generated_description[:100] + "..." if len(generated_description) > 100 else generated_description)
             if generated_description != "No message received":
@@ -88,7 +92,11 @@ def main():
         raise
 
 
-def generate_description(diff_output, temperature):
+def generate_description(diff_output, temperature, provider_name, model_name):
+    provider_class = getattr(g4f.Provider, provider_name.split('.')[-1])
+    if not issubclass(provider_class, BaseProvider):
+        raise ValueError(f"Invalid provider: {provider_name}")
+
     prompt = f"""**Instructions:**
 
 Please generate a **Pull Request description** for the provided diff, following these guidelines:
@@ -99,10 +107,10 @@ Please generate a **Pull Request description** for the provided diff, following 
 **Diff:**
 {diff_output}"""
 
-    client = Client()
+    client = Client(provider=provider_class)
     print(f"Sending request to GPT-4 with temperature {temperature}")
     chat_completion = client.chat.completions.create(
-        model="gpt-4",
+        model=model_name,
         messages=[
             {
                 'role': 'system',
@@ -114,11 +122,11 @@ Please generate a **Pull Request description** for the provided diff, following 
             },
         ],
         temperature=temperature,
-        max_tokens=1024,
+        max_tokens=2048,
     )
 
     description = chat_completion.choices[0].message.content.strip()
-    print(f"Received response from GPT-4. Length: {len(description)} characters")
+    print(f"Received response from {model_name}. Length: {len(description)} characters")
     return description
 
 
