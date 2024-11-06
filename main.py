@@ -1,7 +1,7 @@
 import os
 import json
 from github import Github
-from subprocess import check_output
+from subprocess import check_output, CalledProcessError
 from github import GithubException
 from g4f.client import Client
 
@@ -21,13 +21,13 @@ def main():
         temperature = float(os.getenv('INPUT_TEMPERATURE', '0.7'))
         event_name = os.getenv('GITHUB_EVENT_NAME')
 
+        print(f"Temperature: {temperature}")
+        print(f"Event name: {event_name}")
         if not github_token:
             raise ValueError('GitHub token not provided as input.')
 
         context = get_github_context()
-        print("GitHub context:")
-        print(json.dumps(context, indent=2))
-
+        
         if event_name != 'pull_request':
             raise ValueError('This action only runs on pull_request events.')
 
@@ -35,24 +35,39 @@ def main():
         base_ref = context['pull_request']['base']['ref']
         head_ref = context['pull_request']['head']['ref']
 
+        print(f"PR number: {pr_number}")
+        print(f"Base ref: {base_ref}")
+        print(f"Head ref: {head_ref}")
         # Set up Git
         os.system('git config --global user.name "github-actions[bot]"')
         os.system('git config --global user.email "github-actions[bot]@users.noreply.github.com"')
 
         # Fetch branches
-        os.system(f'git fetch origin {base_ref} {head_ref}')
+        print(f"Fetching branches: {base_ref} and {head_ref}")
+        fetch_result = os.system(f'git fetch origin {base_ref} {head_ref}')
+        if fetch_result != 0:
+            raise RuntimeError(f"Failed to fetch branches. Exit code: {fetch_result}")
 
         # Get the diff
-        diff_output = check_output(f'git diff origin/{base_ref} origin/{head_ref}', shell=True, encoding='utf-8')
+        print(f"Getting diff between origin/{base_ref} and origin/{head_ref}")
+        try:
+            diff_output = check_output(f'git diff origin/{base_ref} origin/{head_ref}', shell=True, encoding='utf-8', stderr=-1)
+        except CalledProcessError as e:
+            print(f"Error output: {e.stderr}")
+            raise RuntimeError(f"Failed to get diff. Exit code: {e.returncode}")
+
+        print("Diff obtained successfully")
+        print(f"Diff length: {len(diff_output)} characters")
 
         # Generate the PR description
-        generated_description = generate_description(diff_output, temperature)
         retry_count = 0
         max_retries = 10
         generated_description = None
 
         while retry_count < max_retries:
             generated_description = generate_description(diff_output, temperature)
+            print(f"Generated description (attempt {retry_count + 1}):")
+            print(generated_description[:100] + "..." if len(generated_description) > 100 else generated_description)
             if generated_description != "No message received":
                 break
             retry_count += 1
@@ -67,7 +82,8 @@ def main():
         print(f'Successfully updated PR #{pr_number} description.')
 
     except Exception as e:
-        print(f'Action failed: {e}')
+        print(f'Action failed: {str(e)}')
+        raise
 
 
 def generate_description(diff_output, temperature):
@@ -82,6 +98,7 @@ Please generate a **Pull Request description** for the provided diff, following 
 {diff_output}"""
 
     client = Client()
+    print(f"Sending request to GPT-4 with temperature {temperature}")
     chat_completion = client.chat.completions.create(
         model="gpt-4",
         messages=[
@@ -99,6 +116,7 @@ Please generate a **Pull Request description** for the provided diff, following 
     )
 
     description = chat_completion.choices[0].message.content.strip()
+    print(f"Received response from GPT-4. Length: {len(description)} characters")
     return description
 
 
@@ -126,7 +144,4 @@ def update_pr_description(github_token, context, pr_number, generated_descriptio
 
 
 if __name__ == '__main__':
-    print("Environment Variables:")
-    for key, value in os.environ.items():
-        print(f"{key}: {value}")
     main()
