@@ -2,7 +2,7 @@ name: Auto-generate PR description [G4F]
 
 on:
   pull_request:
-    types: [opened, edited, reopened, synchronize]
+    types: [opened, synchronize]
 
 jobs:
   generate-pr-description:
@@ -22,3 +22,4 @@ jobs:
         uses: yuri-val/auto-pr-description-g4f-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          model: 'o1-mini'

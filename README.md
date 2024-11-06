@@ -1,4 +1,4 @@
-# Auto-generate PR Description Action
+# Auto-generate PR Description Action [G4F]
 
 ![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
@@ -8,8 +8,9 @@ This GitHub Action automatically generates pull request descriptions using GPT-4
 ## 🚀 Features
 
 - Automatically generates detailed PR descriptions based on the diff between branches
-- Uses GPT-4 for intelligent and context-aware descriptions
+- Uses GPT-4 or other models for intelligent and context-aware descriptions
 - Customizable temperature setting for generation
+- Supports different G4F providers
 - Preserves original PR description as a comment
 - Handles retries in case of generation failures
 
@@ -32,6 +33,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           temperature: 0.7
+          provider: auto
+          model: gpt-4
 ```
 
 ## 📊 Inputs
@@ -40,6 +43,8 @@ jobs:
 |-------|-------------|----------|---------|
 | `github_token` | GitHub token with repo permissions | Yes | `${{ github.token }}` |
 | `temperature` | Sampling temperature for gpt4free (0.0 to 1.0) | No | 0.7 |
+| `provider` | G4F provider to use | No | auto |
+| `model` | Model to use with the selected provider | No | gpt-4 |
 
 ## 📈 Outputs
 
@@ -54,7 +59,7 @@ To set up this project locally:
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/auto-pr-description-g4f-action.git
+   git clone https://github.com/yuri-val/auto-pr-description-g4f-action.git
    ```
 
 2. Install the required dependencies:
@@ -68,7 +73,7 @@ To set up this project locally:
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome! Feel free to check [issues page](https://github.com/yourusername/auto-pr-description-g4f-action/issues) if you want to contribute.
+Contributions, issues, and feature requests are welcome! Feel free to check [issues page](https://github.com/yuri-val/auto-pr-description-g4f-action/issues) if you want to contribute.
 
 ## 📄 License
 
@@ -76,6 +81,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👏 Acknowledgements
 
-- [gpt4free](https://github.com/xtekky/gpt4free) for providing free access to GPT-4
+- [gpt4free](https://github.com/xtekky/gpt4free) for providing free access to GPT-4 and other models
 - [PyGithub](https://github.com/PyGithub/PyGithub) for GitHub API integration
 
+## 🧑‍💻 Author
+
+Yuri V
