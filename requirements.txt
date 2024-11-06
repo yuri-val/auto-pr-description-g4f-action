@@ -1,0 +1,3 @@
+requests
+g4f==0.3.3.3
+PyGithub==2.5.0
