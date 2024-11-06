@@ -1,4 +1,4 @@
 requests
 g4f
-github
+PyGithub==1.55
 # Add any other dependencies your script needs
