@@ -38,7 +38,9 @@ def main():
         print(f"PR number: {pr_number}")
         print(f"Base ref: {base_ref}")
         print(f"Head ref: {head_ref}")
+        
         # Set up Git
+        os.system('git config --global --add safe.directory /github/workspace')
         os.system('git config --global user.name "github-actions[bot]"')
         os.system('git config --global user.email "github-actions[bot]@users.noreply.github.com"')
 
