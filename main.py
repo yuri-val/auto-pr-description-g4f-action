@@ -24,6 +24,7 @@ def main():
             raise ValueError('GitHub token not provided as input.')
 
         context = get_github_context()
+        print("GitHub context: {context}")
 
         if context.get('event_name') != 'pull_request':
             raise ValueError('This action only runs on pull_request events.')
@@ -123,4 +124,7 @@ def update_pr_description(github_token, context, pr_number, generated_descriptio
 
 
 if __name__ == '__main__':
+    print("Environment Variables:")
+    for key, value in os.environ.items():
+        print(f"{key}: {value}")
     main()
