@@ -19,6 +19,7 @@ def main():
         # Inputs
         github_token = os.getenv('INPUT_GITHUB_TOKEN')
         temperature = float(os.getenv('INPUT_TEMPERATURE', '0.7'))
+        event_name = os.getenv('GITHUB_EVENT_NAME')
 
         if not github_token:
             raise ValueError('GitHub token not provided as input.')
@@ -27,7 +28,7 @@ def main():
         print("GitHub context:")
         print(json.dumps(context, indent=2))
 
-        if context.get('event_name') != 'pull_request':
+        if event_name != 'pull_request':
             raise ValueError('This action only runs on pull_request events.')
 
         pr_number = context['pull_request']['number']
