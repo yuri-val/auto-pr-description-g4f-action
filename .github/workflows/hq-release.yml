@@ -111,7 +111,7 @@ jobs:
             }
 
       - name: Create Full Version Release
-        uses: hqnicolas/action-gh-release@v1
+        uses: hqnicolas/action-gh-release@v2.1.0
         with:
           tag_name: ${{ steps.get_tag.outputs.TAG }}
           name: Release ${{ steps.get_tag.outputs.TAG }}
