@@ -1,4 +1,4 @@
-name: Auto-generate PR description [G4F]
+name: Auto generate PR Description [C4F]
 
 on:
   pull_request:
