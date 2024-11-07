@@ -13,6 +13,14 @@ inputs:
     description: 'Sampling temperature for gpt4free (0.0 to 1.0)'
     required: false
     default: '0.7'
+  provider:
+    description: 'G4F provider to use'
+    required: false
+    default: 'auto'
+  model:
+    description: 'Model to use with the selected provider'
+    required: false
+    default: 'gpt-4'
 outputs:
   pr_number:
     description: 'The number of the pull request updated'
