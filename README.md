@@ -59,7 +59,7 @@ To set up this project locally:
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yuri-val/auto-pr-description-g4f-action.git
+   git clone https://github.com/hqnicolas/auto-pr-description-g4f-action.git
    ```
 
 2. Install the required dependencies:
