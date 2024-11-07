@@ -43,8 +43,8 @@ jobs:
 |-------|-------------|----------|---------|
 | `github_token` | GitHub token with repo permissions | Yes | `${{ github.token }}` |
 | `temperature` | Sampling temperature for gpt4free (0.0 to 1.0) | No | 0.7 |
-| `provider` | G4F provider to use | No | auto |
-| `model` | Model to use with the selected provider | No | gpt-4 |
+| `provider` | G4F provider to use [docs](docs/providers-and-models.md) | No | auto |
+| `model` | Model to use with the selected provider [docs](docs/providers-and-models.md) | No | gpt-4 |
 
 ## 📈 Outputs
 

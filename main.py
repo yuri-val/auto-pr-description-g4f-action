@@ -147,7 +147,7 @@ def update_pr_description(github_token, context, pr_number, generated_descriptio
     current_description = pull_request.body or ''
     new_description = f"""> `AUTO DESCRIPTION`
 > by [auto-pr-description-g4f-action](https://github.com/yuri-val/auto-pr-description-g4f-action)
-{generated_description}
+\n{generated_description}
 """
 
     try:
