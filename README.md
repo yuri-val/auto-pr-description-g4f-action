@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Generate PR Description
-        uses: yuri-val/auto-pr-description-g4f-action@v1
+        uses:hqnicolas/auto-pr-description-g4f-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           temperature: 0.7
