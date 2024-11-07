@@ -1,6 +1,6 @@
 name: 'Auto generate PR Description [C4F]'
 description: 'Automatically generates pull request descriptions using gpt4free when a PR is created or updated.'
-author: 'Yuri V'
+author: 'Hqnicolas'
 runs:
   using: 'docker'
   image: 'Dockerfile'
