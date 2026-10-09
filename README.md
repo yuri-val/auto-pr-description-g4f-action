@@ -5,6 +5,13 @@
 
 This GitHub Action automatically generates pull request descriptions using GPT-4 via the gpt4free library when a PR is created or updated.
 
+> [!WARNING]
+> **gpt4free is not an official API.** Your diff is sent to third-party providers that are not
+> OpenAI and are not bound by any agreement with you — they may log or keep what they receive.
+> Do not use this action on private or proprietary code; use
+> [auto-pr-description-action](https://github.com/yuri-val/auto-pr-description-action) with an
+> OpenAI key instead. On a private repository the action prints a warning in the log.
+
 ## 🚀 Features
 
 - Automatically generates detailed PR descriptions based on the diff between branches
@@ -12,7 +19,19 @@ This GitHub Action automatically generates pull request descriptions using GPT-4
 - Customizable temperature setting for generation
 - Supports different G4F providers
 - Preserves original PR description as a comment
-- Handles retries in case of generation failures
+- Handles retries in case of generation failures, with a 2-minute timeout per attempt
+
+## 🔒 Safety
+
+- **No shell sees PR data.** The diff comes from the GitHub API; branch names, which the PR
+  author controls, never reach a command line. Only diffs too large for the API fall back to
+  local git, addressed by commit SHA.
+- **Secrets are not sent to the provider.** The hunks of `.env*`, `*.pem`, `*.key`,
+  `*.p12`/`*.pfx`, SSH keys, `master.key`, `credentials.*`/`secrets.*` config files and similar
+  are replaced by a placeholder before the diff leaves the runner.
+- **Issue-closing keywords are guarded.** A generated `Closes #N` / `Fixes #N` is turned into
+  `Refs #N` unless the human-written description already contained that reference.
+- **Pinned image.** The Docker base image is pinned by digest, Python dependencies by version.
 
 ## 📋 Usage
 
@@ -22,11 +41,15 @@ To use this action in your workflow, add the following step to your `.github/wor
 name: Auto-generate PR Description
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, reopened, synchronize]
 
 jobs:
   generate-pr-description:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     steps:
       - name: Generate PR Description
         uses: yuri-val/auto-pr-description-g4f-action@v1

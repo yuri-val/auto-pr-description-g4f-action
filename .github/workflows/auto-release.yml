@@ -13,112 +13,100 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get tag name
-        id: get_tag
-        shell: bash
-        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-      - name: Get base version
-        id: get_base_version
+      # Every value derived from the tag reaches the shell through env, never
+      # through ${{ }} interpolation: a tag name may legally contain $( ) and
+      # backticks, and an interpolated one would run as a command.
+      - name: Resolve versions
+        id: versions
         shell: bash
         run: |
-          BASE_VERSION=$(echo "${{ steps.get_tag.outputs.TAG }}" | cut -d. -f1)
-          echo "BASE_VERSION=${BASE_VERSION}" >> $GITHUB_OUTPUT
-
-      - name: Get previous tag
-        id: get_previous_tag
-        shell: bash
-        run: |
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "${{ steps.get_tag.outputs.TAG }}"^ || echo "")
-          echo "PREVIOUS_TAG=${PREVIOUS_TAG}" >> $GITHUB_OUTPUT
+          TAG="${GITHUB_REF#refs/tags/}"
+          if ! [[ "$TAG" =~ ^v[0-9]+(\.[0-9]+)*(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag '$TAG' is not a version tag (vX.Y.Z)."
+            exit 1
+          fi
+          BASE_VERSION="${TAG%%.*}"
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 --match 'v*.*' "${TAG}^" 2>/dev/null || echo "")
+          {
+            echo "TAG=${TAG}"
+            echo "BASE_VERSION=${BASE_VERSION}"
+            echo "PREVIOUS_TAG=${PREVIOUS_TAG}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Generate changelog
         id: generate_changelog
         shell: bash
+        env:
+          PREVIOUS_TAG: ${{ steps.versions.outputs.PREVIOUS_TAG }}
+          TAG: ${{ steps.versions.outputs.TAG }}
         run: |
-          if [ -n "${{ steps.get_previous_tag.outputs.PREVIOUS_TAG }}" ]; then
-            CHANGELOG=$(git log --pretty=format:"- %B" "${{ steps.get_previous_tag.outputs.PREVIOUS_TAG }}..${{ steps.get_tag.outputs.TAG }}")
+          if [ -n "$PREVIOUS_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %B" "${PREVIOUS_TAG}..${TAG}")
           else
-            CHANGELOG=$(git log --pretty=format:"- %B" "${{ steps.get_tag.outputs.TAG }}")
+            CHANGELOG=$(git log --pretty=format:"- %B" "${TAG}")
           fi
-          # Remove any trailing newlines and add one at the end
           CHANGELOG=$(echo "$CHANGELOG" | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n\+$/\n/')
-          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # A random delimiter: a commit message line equal to a fixed one
+          # would end the value early and inject extra step outputs.
+          delimiter="EOF_$(openssl rand -hex 16)"
+          {
+            echo "CHANGELOG<<${delimiter}"
+            echo "$CHANGELOG"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create or update base version tag
         shell: bash
+        env:
+          BASE_VERSION: ${{ steps.versions.outputs.BASE_VERSION }}
         run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
-          git tag -f "${{ steps.get_base_version.outputs.BASE_VERSION }}" "${GITHUB_SHA}"
-          git push origin --force "${{ steps.get_base_version.outputs.BASE_VERSION }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f "$BASE_VERSION" "${GITHUB_SHA}"
+          git push origin --force "refs/tags/${BASE_VERSION}"
 
       - name: Create or Update Base Release
-        uses: actions/github-script@v6
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          CHANGELOG: ${{ toJSON(steps.generate_changelog.outputs.CHANGELOG) }}
+          CHANGELOG: ${{ steps.generate_changelog.outputs.CHANGELOG }}
+          BASE_VERSION: ${{ steps.versions.outputs.BASE_VERSION }}
+          FULL_VERSION: ${{ steps.versions.outputs.TAG }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const baseVersion = `${{ steps.get_base_version.outputs.BASE_VERSION }}`;
-            const fullVersion = `${{ steps.get_tag.outputs.TAG }}`;
-            const changelog = JSON.parse(process.env.CHANGELOG);
+            const baseVersion = process.env.BASE_VERSION;
+            const fullVersion = process.env.FULL_VERSION;
+            const changelog = process.env.CHANGELOG;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const tagName = baseVersion;
+            const release = {
+              owner,
+              repo,
+              tag_name: baseVersion,
+              name: `Base Release ${baseVersion}`,
+              body: `This is the base release for ${baseVersion}. Latest version: ${fullVersion}\n\nChangelog:\n${changelog}`,
+              draft: false,
+              prerelease: false,
+            };
 
             try {
-              // Try to get the existing release
-              const { data: release } = await github.rest.repos.getReleaseByTag({
-                owner,
-                repo,
-                tag: tagName
-              });
-
-              // If it exists, update it
-              await github.rest.repos.updateRelease({
-                owner,
-                repo,
-                release_id: release.id,
-                tag_name: tagName,
-                name: `Base Release ${baseVersion}`,
-                body: `This is the base release for ${baseVersion}. Latest version: ${fullVersion}\n\nChangelog:\n${changelog}`,
-                draft: false,
-                prerelease: false
-              });
+              const { data: existing } = await github.rest.repos.getReleaseByTag({ owner, repo, tag: baseVersion });
+              await github.rest.repos.updateRelease({ ...release, release_id: existing.id });
             } catch (error) {
-              if (error.status === 404) {
-                // If it doesn't exist, create it
-                await github.rest.repos.createRelease({
-                  owner,
-                  repo,
-                  tag_name: tagName,
-                  name: `Base Release ${baseVersion}`,
-                  body: `This is the base release for ${baseVersion}. Latest version: ${fullVersion}\n\nChangelog:\n${changelog}`,
-                  draft: false,
-                  prerelease: false
-                });
-              } else {
-                throw error;
-              }
+              if (error.status !== 404) throw error;
+              await github.rest.repos.createRelease(release);
             }
 
       - name: Create Full Version Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
-          tag_name: ${{ steps.get_tag.outputs.TAG }}
-          name: Release ${{ steps.get_tag.outputs.TAG }}
+          tag_name: ${{ steps.versions.outputs.TAG }}
+          name: Release ${{ steps.versions.outputs.TAG }}
           body: |
             Changes in this Release:
             ${{ steps.generate_changelog.outputs.CHANGELOG }}
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
