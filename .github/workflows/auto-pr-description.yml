@@ -2,7 +2,7 @@ name: Auto-generate PR description [G4F]
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, reopened, synchronize]
 
 jobs:
   generate-pr-description:
@@ -13,10 +13,13 @@ jobs:
       issues: write
 
     steps:
+      # The action reads the diff through the API; the checkout only serves
+      # the local-git fallback for diffs the API refuses as too large.
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Auto-generate PR Description
         uses: yuri-val/auto-pr-description-g4f-action@v1
